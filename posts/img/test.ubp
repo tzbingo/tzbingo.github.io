@@ -1,0 +1,15 @@
+module main
+author unknown
+version 1 0 
+description ''
+variables LedOn 
+
+script 40 40 {
+whenButtonPressed 'A'
+if (digitalReadOp 4) {
+  setUserLED true
+} else {
+  setUserLED false
+}
+}
+

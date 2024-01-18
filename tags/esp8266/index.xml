@@ -1,0 +1,15 @@
+<rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
+    <channel>
+        <title>Esp8266 - 标签 - 月河纪</title>
+        <link>https://tzbingo.github.io/tags/esp8266/</link>
+        <description>Esp8266 - 标签 - 月河纪</description>
+        <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Thu, 18 Jan 2024 12:18:38 &#43;0800</lastBuildDate><atom:link href="https://tzbingo.github.io/tags/esp8266/" rel="self" type="application/rss+xml" /><item>
+    <title>用MicroBlocks重新打造机智云开发板的物联功能</title>
+    <link>https://tzbingo.github.io/gizwits/</link>
+    <pubDate>Thu, 18 Jan 2024 12:18:38 &#43;0800</pubDate>
+    <author>Bingo</author>
+    <guid>https://tzbingo.github.io/gizwits/</guid>
+    <description><![CDATA[前言： 本文介绍了用MicroBlocks给机智云开发板刷固件及编写接口文件，然后通过用Python编写代码获取板载光敏电阻的值和远程控制RG]]></description>
+</item>
+</channel>
+</rss>
