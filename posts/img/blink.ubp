@@ -1,0 +1,15 @@
+module main
+author unknown
+version 1 0 
+description ''
+
+script 100 50 {
+whenStarted
+for i 10 {
+  setUserLED true
+  waitMillis 500
+  setUserLED false
+  waitMillis 500
+}
+}
+

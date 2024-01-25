@@ -1,8 +1,8 @@
 <rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
     <channel>
-        <title>所有文章 - 月河纪</title>
+        <title>所有文章 - 凡人微光</title>
         <link>https://tzbingo.github.io/posts/</link>
-        <description>所有文章 | 月河纪</description>
+        <description>所有文章 | 凡人微光</description>
         <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Thu, 18 Jan 2024 12:18:38 &#43;0800</lastBuildDate><atom:link href="https://tzbingo.github.io/posts/" rel="self" type="application/rss+xml" /><item>
     <title>Markdown 基本语法</title>
     <link>https://tzbingo.github.io/basic-markdown-syntax/</link>

@@ -1,8 +1,8 @@
 <rss xmlns:atom="http://www.w3.org/2005/Atom" version="2.0">
     <channel>
-        <title>物联网 - 分类 - 月河纪</title>
+        <title>物联网 - 分类 - 凡人微光</title>
         <link>https://tzbingo.github.io/categories/%E7%89%A9%E8%81%94%E7%BD%91/</link>
-        <description>物联网 - 分类 - 月河纪</description>
+        <description>物联网 - 分类 - 凡人微光</description>
         <generator>Hugo -- gohugo.io</generator><language>zh-CN</language><copyright>This work is licensed under a Creative Commons Attribution-NonCommercial 4.0 International License.</copyright><lastBuildDate>Thu, 18 Jan 2024 12:18:38 &#43;0800</lastBuildDate><atom:link href="https://tzbingo.github.io/categories/%E7%89%A9%E8%81%94%E7%BD%91/" rel="self" type="application/rss+xml" /><item>
     <title>用MicroBlocks重新打造机智云开发板的物联功能</title>
     <link>https://tzbingo.github.io/gizwits/</link>
