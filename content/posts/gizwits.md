@@ -29,8 +29,8 @@ draft = false
 #### 三、用MicroBlocks编写接口固件   
 ##### 1. 测试ESP8266芯片上的LED灯   
 就像我们编写程序时，常用Hello World测试一样，测试硬件时，常用Blink进行测试，可以用如下脚本测试固件是否烧写成功及ESP8266芯片上的LED指示灯：    
-![](/images/gizwits/blink.png "循环10次闪灯程序")
-你可以直接下载上述图片并拖入MicroBlocks软件窗口进行测试，或者点击[blink.udp](https://microblocksfun.cn/run/microblocks.html#project=https://tzbingo.github.io/posts/img/blink.ubp)打开这个例子。  
+![](/images/gizwits/Blink.png "循环10次闪灯程序")
+你可以直接下载上述图片并拖入MicroBlocks软件窗口进行测试，或者点击[blink.udp](https://microblocksfun.cn/run/microblocks.html#project=https://tzbingo.github.io/images/gizwits/blink.ubp)打开这个例子。  
 ##### 2. 用按键A控制板载的彩灯 
 为了控制板载的RGB LED，需要知道其连接在ESP8266的那些引脚，可以参考如下列表：  
 

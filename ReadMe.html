@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 导出</title>
+    <style>
+        body {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            margin-top: 24px;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        h1, h2 {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 0.3em;
+        }
+        code {
+            background-color: #f1f3f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 16px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+        }
+        blockquote {
+            border-left: 4px solid #007bff;
+            padding: 0 1em;
+            margin: 0 0 16px 0;
+            color: #6c757d;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <h3>标准写作流程（每次写文章都按这个来）</h3>
+<h4>1. 打开项目与同步（第一步必做！）</h4>
+<p>每次准备写博客前，先打开 VS Code，确保打开的是 E:\blog 文件夹。打开终端（Ctrl + `），输入：</p>
+<pre><code class="language-Bash">git pull
+</code></pre>
+<ul>
+<li><strong>为什么要这么做？</strong><br>哪怕你只用这一台 Windows 电脑，也要养成这个习惯。万一你哪天在 Linux Mint 上改了一个错别字，或者在 GitHub 网页上修了个 bug，不拉取（pull）下来直接写新文章，以后提交就会报错（冲突）。</li>
+</ul>
+<h4>2. 新建文章</h4>
+<p>在终端里输入 Hugo 的命令来生成文章模板（这样会自动带上时间、标题等信息）：</p>
+<pre><code class="language-Bash">hugo new posts/myblog.md
+</code></pre>
+<p>(注意：如果不习惯用命令，你也可以直接在左侧文件栏 content/posts 文件夹上右键 -&gt; 新建文件，自己复制粘贴头部的格式)</p>
+<h4>3. 撰写与修改设置（关键点）</h4>
+<p>在左侧文件栏找到刚才新建的 content/posts/myblog.md，开始写作。<br><strong>⚠️ 这里有一个新手最容易踩的坑：</strong><br>请看文件最上面的内容（Front Matter），通常长这样：</p>
+<pre><code class="language-Yaml">---
+title: &quot;我的博客&quot;
+date: 2026-01-xx...
+draft: true  &lt;-- 注意这里！！
+---
+</code></pre>
+<ul>
+<li>draft: true 意思是“草稿”。只要这一行是 true，你推送到 GitHub 后，<strong>网页上是不会显示这篇文章的。</strong></li>
+<li><strong>解决方法：</strong> 当你觉得写好了，准备发布时，把 true 改成 false。</li>
+</ul>
+<h4>4. 本地预览（所见即所得）</h4>
+<p>在推送到网上之前，先在本地看看效果。在终端输入：</p>
+<pre><code class="language-Bash">hugo server -D
+</code></pre>
+<ul>
+<li>(加 -D 的意思是即使是草稿也预览)</li>
+<li>终端会显示一个地址，通常是 <a href="http://localhost:1313%E3%80%82">http://localhost:1313。</a></li>
+<li>按住 <strong>Ctrl</strong> 点击这个链接，浏览器就会打开预览页面。</li>
+<li>你可以一边改文字，浏览器会自动刷新，非常爽。</li>
+<li><strong>退出预览：</strong> 在终端里按 <strong>Ctrl + C</strong> 停止运行。</li>
+</ul>
+<h4>5. 发布上线</h4>
+<p>文章写好、draft 改成 false、预览也没问题了，就可以发布了。<br>在终端依次执行这三行：</p>
+<pre><code class="language-Bash">git add .
+git commit -m &quot;新增文章：我的博客&quot;
+git push
+</code></pre>
+<h3>此时发生了什么？</h3>
+<ol>
+<li>你的源码被上传到了 GitHub。</li>
+<li>GitHub Actions 检测到更新，自动启动一台虚拟服务器。</li>
+<li>它安装 Hugo，编译你的网站，生成 HTML。</li>
+<li>自动部署到你的网址。</li>
+<li>喝口水（约 1 分钟后），刷新你的博客，新文章就出现了。</li>
+</ol>
+<h3>以后去 Linux Mint 上怎么写？</h3>
+<p>完全一样！</p>
+<ol>
+<li>打开终端进入目录。</li>
+<li>git pull (把刚才在 Windows 写的文章同步下来)。</li>
+<li>hugo new ... 或直接写。</li>
+<li>git add / commit / push。<br>享受你的写作吧！如果遇到问题随时问我。</li>
+</ol>
+<h3>创建图片仓库</h3>
+<p>Hugo 有一个约定：放在 static 文件夹里的任何文件，生成网站时都会被直接复制到网站根目录。<br>在你的博客根目录 E:\blog 下，找到 static 文件夹（如果没有就新建一个）。<br>为了条理清晰，建议在里面新建一个 images 文件夹。<br>目录结构看起来是这样的：</p>
+<pre><code class="language-Text">E:\blog
+├── content
+├── themes
+└── static
+    └── images
+        ├── 2023
+        │   └── my-cat.jpg  &lt;-- 你把图片放在这里
+        └── avatar.png
+</code></pre>
+<h3>在文章中引用图片</h3>
+<p>假设你把一张名为 cat.jpg 的图片放到了 E:\blog\static\images\cat.jpg。<br>在 Markdown 文章里，你应该这样写（注意前面的斜杠 /）：</p>
+<pre><code class="language-Markdown">![这是图片的描述](/images/cat.jpg)
+</code></pre>
+<ul>
+<li>原理： Hugo 编译时，会把 static/images/cat.jpg 搬运到网站的 https://你的域名/images/cat.jpg，所以引用路径要写 /images/...。</li>
+</ul>
+<h3>使用 Paste Image插件</h3>
+<p>手动复制粘贴图片到文件夹太麻烦了。VS Code 有一个神级插件，可以让你像在 Word 里一样，截图 -&gt; 粘贴 -&gt; 自动保存图片并插入代码。</p>
+<ol>
+<li>用微信截图或者系统截图截一张图（图片在剪贴板里）。</li>
+<li>在 VS Code 里正在写的 Markdown 文章中，光标停在你想要插图的位置。</li>
+<li>按快捷键 Ctrl + Alt + V。</li>
+<li>神奇的事情发生了：<ul>
+<li>VS Code 会自动把剪贴板里的图片保存到 static/images 文件夹下（文件名通常是时间戳）。</li>
+<li>Markdown 文章里自动插入了 <img src="/images/2023-xx-xx.png" alt=""> 的代码。</li>
+</ul>
+</li>
+</ol>
+<p>你只需要按下 Ctrl+Alt+V，一切自动搞定。</p>
+
+</body>
+</html>
