@@ -1,0 +1,53 @@
+<!-- layouts/shortcodes/iframe-fullscreen.html -->
+<div class="iframe-container" id="container-{{ .Get "id" }}" style="position: relative; width: 100%; margin: 20px 0;">
+    <!-- 工具栏 -->
+    <div style="background: #f1f1f1; padding: 5px 10px; text-align: right; border: 1px solid #ddd; border-bottom: none;">
+        <button onclick="toggleFullScreen('container-{{ .Get "id" }}')" style="cursor: pointer; padding: 5px 10px;">
+            ⛶ 全屏运行
+        </button>
+    </div>
+    
+    <!-- Iframe 本体 -->
+    <iframe 
+        id="iframe-{{ .Get "id" }}"
+        src="{{ .Get "src" }}" 
+        width="100%" 
+        height="{{ .Get "height" | default "500px" }}" 
+        style="border: 1px solid #ddd; background: white; display: block;"
+        allow="fullscreen"
+    ></iframe>
+</div>
+
+<script>
+function toggleFullScreen(containerId) {
+    var elem = document.getElementById(containerId);
+    var iframe = elem.querySelector('iframe');
+
+    if (!document.fullscreenElement) {
+        // 进入全屏
+        elem.requestFullscreen().catch(err => {
+            alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+        });
+        // 全屏时调整 iframe 高度为 100vh 以占满屏幕
+        iframe.style.height = "100vh";
+    } else {
+        // 退出全屏
+        document.exitFullscreen();
+        // 恢复默认高度
+        iframe.style.height = "{{ .Get "height" | default "500px" }}";
+    }
+}
+
+// 监听全屏变化事件，防止用户按 Esc 退出后高度未恢复
+document.addEventListener('fullscreenchange', (event) => {
+    // 检查哪个容器触发了事件
+    // 这里为了简化，采用通用恢复逻辑，实际项目中可以更精细
+    if (!document.fullscreenElement) {
+         var iframes = document.querySelectorAll('.iframe-container iframe');
+         iframes.forEach(f => {
+             // 恢复原始高度，这里假设默认都是 500px，你可以改进代码通过 data 属性存储原始高度
+             f.style.height = "500px"; 
+         });
+    }
+});
+</script>

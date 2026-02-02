@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>代码护盾</title>
+    <style>
+        :root {
+            --primary-color: #0f0;
+            --secondary-color: #00cc00;
+            --danger-color: #ff3333;
+            --bg-color: #050505;
+            --ui-bg: rgba(0, 15, 0, 0.96);
+            /* 使用等宽字体以确保对齐 */
+            --font-main: 'Consolas', 'Monaco', 'Courier New', monospace;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            font-family: var(--font-main);
+            user-select: none;
+        }
+
+        #input-trap {
+            position: absolute; bottom: 60px; left: 50%;
+            transform: translateX(-50%); width: 200px; height: 40px;
+            opacity: 0.01; z-index: 1000; font-size: 20px; cursor: text;
+        }
+
+        #bgCanvas { position: absolute; top: 0; left: 0; z-index: 1; opacity: 0.2; }
+        #gameCanvas { position: absolute; top: 0; left: 0; z-index: 2; pointer-events: none;}
+        
+        #ui-layer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10; pointer-events: none;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+
+        .hud-top {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 20px; font-size: 20px;
+            text-shadow: 0 0 10px var(--primary-color);
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+        }
+
+        .bar-container {
+            width: 250px; height: 15px; border: 2px solid #333;
+            background: #000; border-radius: 4px; margin-top: 5px;
+            overflow: hidden; position: relative;
+        }
+        .bar-fill { height: 100%; width: 100%; transition: width 0.3s; }
+        #hp-fill { background: var(--danger-color); }
+        #progress-fill { background: var(--primary-color); width: 0%; }
+
+        /* 关卡指示器 */
+        #level-indicator {
+            position: absolute; top: 80px; left: 20px;
+            font-size: 16px; color: #aaa; border: 1px solid #333;
+            padding: 5px 10px; background: rgba(0,0,0,0.5); border-radius: 4px;
+        }
+
+        .modal {
+            pointer-events: auto; position: absolute;
+            top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: var(--ui-bg); border: 2px solid var(--primary-color);
+            padding: 30px; text-align: center;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.2);
+            max-width: 850px; width: 90%; border-radius: 12px;
+            z-index: 2000; max-height: 90vh; overflow-y: auto;
+        }
+
+        h1 { margin: 0 0 10px 0; color: #fff; text-shadow: 0 0 10px var(--primary-color); }
+        h2 { display: flex; justify-content: center; margin: 15px 0 10px 0; font-size: 18px; color: #aaa; border-bottom: 1px solid #333; padding-bottom: 5px;}
+
+        .btn-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-bottom: 10px; }
+        #btn-speed-grid {justify-content: right;margin-right: 20px;}
+        #btn-rate-grid {justify-content: left;margin-left: 20px;}
+
+        .btn {
+            background: transparent; color: var(--secondary-color);
+            border: 1px solid var(--secondary-color); padding: 8px 12px;
+            font-family: var(--font-main); font-size: 14px;
+            cursor: pointer; transition: 0.2s; border-radius: 4px;
+        }
+        .btn:hover { background: var(--secondary-color); color: #000; }
+        .btn.active { background: var(--primary-color); color: #000; font-weight: bold; box-shadow: 0 0 10px var(--primary-color); border-color: var(--primary-color);}
+        
+        /* 这种特别的按钮用于下一关 */
+        .btn-next {
+            background: #004400; border-color: #0f0; color: #fff; 
+            font-size: 18px; padding: 10px 20px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 0, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 0, 0); }
+        }
+
+        .btn-edit { font-size: 12px; padding: 4px 8px; border: 1px dashed #666; color: #888; margin-left: 10px; visibility: hidden;}
+        .btn-edit:hover { border-color: #fff; color: #fff; }
+        #edit-chn-btn { position: absolute; right: 0; }
+        #edit-code-btn { position: absolute; right: 0; }
+        
+        #editor-modal { z-index: 3000; text-align: left; }
+        textarea {
+            width: 100%; height: 200px; background: #000; color: #0f0;
+            border: 1px solid #333; font-family: monospace; font-size: 14px;
+            padding: 10px; box-sizing: border-box; resize: vertical; margin: 10px 0;
+        }
+        .editor-tip { font-size: 12px; color: #888; margin-bottom: 10px; }
+
+        .hidden { display: none !important; }
+
+        /* 统计图表样式 */
+        .keyboard-map {
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            margin: 20px 0; background: #000; padding: 15px;
+            border-radius: 8px; border: 1px solid #333;
+        }
+        .kb-row { display: flex; gap: 5px; }
+        .key {
+            width: 30px; height: 30px; border: 1px solid #444; color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 4px; font-size: 12px; font-weight: bold;
+        }
+        .key.space { width: 200px; }
+        .key.good { background: #004400; border-color: #0f0; color: #0f0; }
+        .key.bad { background: #440000; border-color: #f00; color: #f00; }
+
+        .error-list {
+            display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+            margin: 20px 0; padding: 15px; background: #110000;
+            border: 1px solid #500; border-radius: 8px; min-height: 50px;
+        }
+        .error-tag { background: #300; color: #f88; padding: 5px 10px; border-radius: 4px; border: 1px solid #500; }
+
+        #combo-display {
+            position: absolute; bottom: 20px; left: 10%; transform: translateX(-50%);
+            font-size: 24px; font-weight: bold; color: #ff0;
+            text-shadow: 0 0 10px orange; opacity: 0; transition: all 0.1s; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <input type="text" id="input-trap" autocomplete="off" placeholder="点击此处激活输入" />
+
+    <canvas id="bgCanvas"></canvas>
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div class="hud-top hidden" id="hud">
+            <div>
+                <div>得分: <span id="score-val">0</span> / <span id="target-score">1000</span></div>
+                <div class="bar-container"><div class="bar-fill" id="progress-fill"></div></div>
+            </div>
+            <div style="text-align: right;">
+                <div>护盾完整度</div>
+                <div class="bar-container" style="border-color: #500;"><div class="bar-fill" id="hp-fill"></div></div>
+            </div>
+        </div>
+        <!-- 关卡指示 -->
+        <div id="level-indicator" class="hidden">LEVEL <span id="level-val">1</span></div>
+        <div id="combo-display">连击 x0</div>
+    </div>
+
+    <!-- 主菜单 -->
+    <div id="start-menu" class="modal">
+        <h1>编程防御：代码护盾</h1>
+        
+        <h2>1. 英文与符号 (基础键位)</h2>
+        <div class="btn-grid" id="diff-eng-btns"></div>
+
+        <h2>
+            2. Python 编程 (代码逻辑)<button class="btn btn-edit" id="edit-code-btn" onclick="openEditor()">✏️ 编辑代码</button>
+        </h2>
+        <div class="btn-grid" id="diff-code-btns"></div>
+        <h2>
+            3. 中文录入 (需开启输入法)<button class="btn btn-edit" id="edit-chn-btn" onclick="openEditor()">✏️ 编辑中文</button>
+        </h2>
+        <div class="btn-grid" id="diff-chn-btns"></div>
+
+        <h2>4. 初始难度设置</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; ">
+            <div class="btn-grid" id="btn-speed-grid" >
+                <button class="btn active" onclick="setSpeed('slow', this)">慢速</button>
+                <button class="btn" onclick="setSpeed('medium', this)">中速</button>
+                <button class="btn" onclick="setSpeed('fast', this)">极速</button>
+            </div>
+            <div class="btn-grid" id="btn-rate-grid" >
+                <button class="btn" onclick="setRate('low', this)">稀疏</button>
+                <button class="btn active" onclick="setRate('normal', this)">正常</button>
+                <button class="btn" onclick="setRate('high', this)">密集</button>
+            </div>
+        </div>
+
+        <br>
+        <button class="btn" style="padding: 15px 50px; font-size: 22px; background: var(--primary-color); color: #000; font-weight: bold;" onclick="startGame()">启动系统</button>
+    </div>
+
+    <!-- 编辑器弹窗 -->
+    <div id="editor-modal" class="modal hidden">
+        <h2 style="margin-top:0">自定义练习内容</h2>
+        <div class="editor-tip">每行一个单词、短语或句子。修改后点击“保存”生效。</div>
+        <textarea id="custom-data-input"></textarea>
+        <div style="text-align: right;">
+            <button class="btn" onclick="closeEditor()">取消</button>
+            <button class="btn active" onclick="saveEditor()">💾 保存并应用</button>
+        </div>
+    </div>
+
+    <!-- 结算面板 -->
+    <div id="result-screen" class="modal hidden">
+        <h1 id="result-title">防御结束</h1>
+        
+        <div id="viz-keyboard-container" class="hidden">
+            <p>键盘易错区分析 (红色为高频错误)</p>
+            <div class="keyboard-map" id="keyboard-viz"></div>
+        </div>
+
+        <div id="viz-word-container" class="hidden">
+            <p>需强化的字词 (漏掉/错误)</p>
+            <div class="error-list" id="word-viz"></div>
+        </div>
+
+        <div style="display: flex; justify-content: space-around; width: 100%; margin: 15px 0; border-top: 1px solid #333; padding-top: 15px;">
+            <div>总得分: <span id="end-score" style="color:#fff">0</span></div>
+            <div>本关打字速度: <span id="end-wpm" style="color:#fff">0</span> WPM</div>
+            <div>本关准确率: <span id="end-acc" style="color:#fff">0%</span></div>
+        </div>
+
+        <!-- 按钮区域 -->
+        <div id="game-over-buttons" style="display: flex; justify-content: center; gap: 20px;">
+            <button class="btn" onclick="resetGame()">返回菜单</button>
+            <!-- 下一关按钮，仅在胜利时显示 -->
+            <button class="btn btn-next hidden" id="next-level-btn" onclick="nextLevel()">🚀 下一关</button>
+        </div>
+    </div>
+
+<script>
+/** --- 游戏数据 --- */
+const DEFAULT_GAME_DATA = {
+    levels_char: [
+        { id: 'l1', name: '基准键 (ASDF...)', data: "asdfghjkl" },
+        { id: 'l2', name: '全字母 (a-z)', data: "abcdefghijklmnopqrstuvwxyz" },
+        { id: 'l3', name: '数字与标点', data: "0123456789,.;'[]/" },
+        { id: 'l4', name: '上档键混合', data: "aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ1!2@3#4$5%6^7&8*9(0)-=+[{]}\\|;:'\",<.>/?" }
+    ],
+    levels_code: [
+        { id: 'c1', name: '核心关键词', data: ["def", "return", "input", "import", "print", "while", "for", "if", "else", "try", "except", "True", "False"] },
+        { id: 'c2', name: '变量与类型', data: ["self", "list", "dict", "str", "int", "float", "len", "range", "open", "None", "lambda"] },
+        { id: 'c3', name: '短代码片段', data: ["i=0", "x=y+1", "print('Hi')", "return True", "lst.append(x)", "import math", "data={}", "def run():"] },
+        { id: 'c4', name: '逻辑控制流', data: ["if x>0:", "for i in range(10):", "def main(args):", "while True:", "try:pass", "elif y==1:", "return [x*2]"] }
+    ],
+    levels_chn: [
+        { id: 'zh1', name: '单字', data: "信,息,科,技,你,好,谢,再,见,小,问,题,记,录,家,人,合,理,性,安,全,询" },
+        { id: 'zh2', name: '常见词语', data: ["二分", "查找", "排序", "算法", "控制", "顺序", "程序", "路径", "流程", "数据"] },
+        { id: 'zh3', name: '四字成语', data: ["鸡兔同笼", "韩信点兵", "人工智能", "神经网络", "语音识别", "图像识别", "循环结构"] },
+        { id: 'zh4', name: '简单短句', data: ["抽象与建模", "控制与反馈", "问题的分解", "认识决策树", "连续量与开关量"] }
+    ]
+};
+
+let GAME_DATA = JSON.parse(localStorage.getItem('CODE_DEFENSE_DATA')) || JSON.parse(JSON.stringify(DEFAULT_GAME_DATA));
+
+const KEYBOARD_LAYOUT = ["1234567890-=", "qwertyuiop[]\\", "asdfghjkl;'", "zxcvbnm,./", " "];
+const SPEEDS = { slow: 0.3, medium: 0.8, fast: 1.5 };
+const SPAWN_RATES = { low: 2500, normal: 1500, high: 800 };
+
+// 全局配置与状态
+let config = { mode: 'char', subLevelId: 'l1', speed: 'slow', spawnRate: 'normal', targetScore: 1000 };
+let gameState = 'MENU'; 
+let enemies = [];
+let lasers = [];
+let particles = [];
+let score = 0, hp = 100, combo = 0;
+let levelMultiplier = 1; // 关卡难度系数
+let lastTime = 0, spawnTimer = 0;
+let keyStats = { total: 0, errors: {}, hits: {} }; 
+let wordStats = { missed: [] }; 
+let isComposing = false;
+let audioCtx = null;
+let levelStartTime = 0; // 记录关卡开始时间
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const bgCanvas = document.getElementById('bgCanvas');
+const bgCtx = bgCanvas.getContext('2d');
+const inputTrap = document.getElementById('input-trap');
+
+function init() {
+    resize();
+    window.addEventListener('resize', resize);
+    renderMenuButtons();
+    document.addEventListener('keydown', handleKeydown);
+    inputTrap.addEventListener('compositionstart', () => { isComposing = true; });
+    inputTrap.addEventListener('compositionend', (e) => { isComposing = false; handleTrapInput(e); });
+    inputTrap.addEventListener('input', handleTrapInput);
+    document.body.addEventListener('click', () => { if(gameState === 'PLAYING') inputTrap.focus(); });
+    initMatrixRain();
+    requestAnimationFrame(loop);
+}
+
+function renderMenuButtons() {
+    const engContainer = document.getElementById('diff-eng-btns');
+    engContainer.innerHTML = '';
+    GAME_DATA.levels_char.forEach(l => {
+        let b = createModeBtn(l.name, 'char', l.id);
+        if(l.id === 'l1') b.classList.add('active'); 
+        engContainer.appendChild(b);
+    });
+
+    const codeContainer = document.getElementById('diff-code-btns');
+    codeContainer.innerHTML = '';
+    GAME_DATA.levels_code.forEach(l => {
+        codeContainer.appendChild(createModeBtn(l.name, 'code', l.id));
+    });
+
+    const chnContainer = document.getElementById('diff-chn-btns');
+    chnContainer.innerHTML = '';
+    GAME_DATA.levels_chn.forEach(l => {
+        chnContainer.appendChild(createModeBtn(l.name, 'chn', l.id));
+    });
+}
+
+function createModeBtn(text, mode, id) {
+    let btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.innerText = text;
+    btn.onclick = () => selectLevel(mode, id, btn);
+    return btn;
+}
+
+function selectLevel(mode, id, btn) {
+    config.mode = mode;
+    config.subLevelId = id;
+    document.querySelectorAll('#start-menu .btn-grid .btn').forEach(b => {
+        if(b.parentNode.id.includes('diff')) b.classList.remove('active');
+    });
+    btn.classList.add('active');
+    document.getElementById('edit-code-btn').style.visibility = (mode === 'code') ? 'visible' : 'hidden';
+    document.getElementById('edit-chn-btn').style.visibility = (mode === 'chn') ? 'visible' : 'hidden';
+}
+
+function setSpeed(spd, btn) { config.speed = spd; updateBtnGroup(btn); }
+function setRate(rate, btn) { config.spawnRate = rate; updateBtnGroup(btn); }
+function updateBtnGroup(activeBtn) {
+    let siblings = activeBtn.parentNode.querySelectorAll('.btn');
+    siblings.forEach(b => b.classList.remove('active'));
+    activeBtn.classList.add('active');
+}
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    bgCanvas.width = window.innerWidth;
+    bgCanvas.height = window.innerHeight;
+}
+
+function openEditor() {
+    let data = [];
+    let levelName = "";
+    if(config.mode === 'code') {
+        let l = GAME_DATA.levels_code.find(i => i.id === config.subLevelId);
+        data = l.data; levelName = l.name;
+    } else if (config.mode === 'chn') {
+        let l = GAME_DATA.levels_chn.find(i => i.id === config.subLevelId);
+        data = l.data; levelName = l.name;
+    } else {
+        alert("基础键位练习不可编辑。"); return;
+    }
+    let contentStr = "";
+    if(typeof data === 'string') {
+        contentStr = data.split(',').join('\n');
+    } else {
+        contentStr = data.join('\n');
+    }
+    document.getElementById('custom-data-input').value = contentStr;
+    document.querySelector('#editor-modal h2').innerText = `编辑: ${levelName}`;
+    document.getElementById('editor-modal').classList.remove('hidden');
+}
+
+function closeEditor() { document.getElementById('editor-modal').classList.add('hidden'); }
+function saveEditor() {
+    const raw = document.getElementById('custom-data-input').value;
+    const arr = raw.split(/[\n]+/).map(s => s.trim()).filter(s => s.length > 0);
+    if(arr.length === 0) { alert("内容不能为空！"); return; }
+    if(config.mode === 'code') {
+        let l = GAME_DATA.levels_code.find(i => i.id === config.subLevelId);
+        l.data = arr;
+    } else if (config.mode === 'chn') {
+        let l = GAME_DATA.levels_chn.find(i => i.id === config.subLevelId);
+        l.data = arr;
+    }
+    localStorage.setItem('CODE_DEFENSE_DATA', JSON.stringify(GAME_DATA));
+    alert("保存成功！");
+    closeEditor();
+}
+
+/** --- 核心逻辑类 --- */
+class Enemy {
+    constructor(text) {
+        this.text = text;
+        this.x = Math.random() * (canvas.width - 250) + 50;
+        this.y = -40;
+        let spdMult = 1;
+        if(config.mode === 'chn') spdMult = 0.6; 
+        if(config.mode === 'code') spdMult = 0.8;
+        
+        // 速度随关卡等级增加
+        let levelSpeedBonus = 1 + (levelMultiplier - 1) * 0.15;
+        this.speed = SPEEDS[config.speed] * spdMult * levelSpeedBonus;
+        
+        this.typed = ""; 
+    }
+    update(dt) { this.y += this.speed * (dt / 16); }
+    
+    // --- 视觉优化：高对比度 + 基准线 ---
+    draw(ctx) {
+        ctx.font = 'bold 26px "Consolas", "Monaco", "Courier New", monospace';
+        
+        // 1. 已输入部分 (绿色)
+        ctx.fillStyle = '#0f0'; 
+        ctx.shadowBlur = 12; ctx.shadowColor = '#0f0';
+        ctx.fillText(this.typed, this.x, this.y);
+        ctx.shadowBlur = 0;
+
+        // 2. 基准线 (Baseline Guide) - 蓝色、清晰
+        let fullWidth = ctx.measureText(this.text).width;
+        ctx.strokeStyle = 'rgba(255, 255, 0, 0.6)'; // 亮蓝，透明度0.6
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        // 基准线画在文字下方，有助于区分 p/P, g, j 等
+        ctx.moveTo(this.x-3, this.y + 3); 
+        ctx.lineTo(this.x + fullWidth, this.y + 3);
+        ctx.stroke();
+
+        // 3. 未输入部分
+        let startX = this.x + ctx.measureText(this.typed).width;
+        let remain = this.text.substring(this.typed.length);
+
+        for (let i = 0; i < remain.length; i++) {
+            let char = remain[i];
+            
+            // 颜色高对比度方案
+            if (config.mode !== 'chn') { 
+                if (/[A-Z]/.test(char)) {
+                    ctx.fillStyle = '#00ff00'; // 大写字母：青色
+                } else if (/[0-9]/.test(char)) {
+                    ctx.fillStyle = '#ff8800'; // 数字：金色
+                } else if (/[^A-Za-z0-9\u4e00-\u9fa5]/.test(char)) { 
+                    ctx.fillStyle = '#ff00ff'; // 标点：洋红色
+                } else {
+                    ctx.fillStyle = '#ffffff'; // 小写字母：纯白
+                }
+            } else {
+                ctx.fillStyle = '#ffffff';     // 中文模式：纯白
+            }
+
+            ctx.fillText(char, startX, this.y);
+            startX += ctx.measureText(char).width;
+            ctx.shadowBlur = 0;
+        }
+    }
+}
+
+class Laser {
+    constructor(tx, ty) {
+        this.sx = canvas.width / 2; this.sy = canvas.height - 50;
+        this.tx = tx; this.ty = ty;
+        this.life = 1.0;
+    }
+    update() { this.life -= 0.15; }
+    draw(ctx) {
+        ctx.globalAlpha = this.life;
+        ctx.beginPath(); ctx.moveTo(this.sx, this.sy); ctx.lineTo(this.tx, this.ty);
+        ctx.strokeStyle = '#0f0'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+}
+
+/** --- 游戏流程控制 --- */
+function startGame() {
+    initAudio();
+    levelMultiplier = 1; // 重置关卡
+    score = 0;
+    startLevel();
+}
+
+function startLevel() {
+    gameState = 'PLAYING';
+    enemies = []; lasers = []; particles = [];
+    hp = 100; combo = 0;
+    // 不重置 score，累积
+    
+    // 记录关卡开始时间
+    levelStartTime = Date.now();
+
+    // 更新目标分数，每关增加
+    config.currentTargetScore = config.targetScore + (levelMultiplier - 1) * config.targetScore;
+    
+    // 统计重置(每关单独算准确率)
+    keyStats = { total: 0, errors: {}, hits: {} };
+    wordStats = { missed: [] };
+    
+    // UI 更新
+    document.getElementById('start-menu').classList.add('hidden');
+    document.getElementById('result-screen').classList.add('hidden');
+    document.getElementById('hud').classList.remove('hidden');
+    document.getElementById('level-indicator').classList.remove('hidden');
+    document.getElementById('level-val').innerText = levelMultiplier;
+    
+    updateUI();
+    
+    inputTrap.value = '';
+    inputTrap.focus();
+    requestAnimationFrame(loop);
+}
+
+// 下一关逻辑
+function nextLevel() {
+    levelMultiplier++;
+    startLevel();
+}
+
+function spawnEnemy() {
+    let content = "";
+    let levelData;
+    if(config.mode === 'char') levelData = GAME_DATA.levels_char.find(l=>l.id===config.subLevelId).data;
+    else if(config.mode === 'code') levelData = GAME_DATA.levels_code.find(l=>l.id===config.subLevelId).data;
+    else levelData = GAME_DATA.levels_chn.find(l=>l.id===config.subLevelId).data;
+
+    if(typeof levelData === 'string') {
+        let arr;
+        if (config.mode === 'char') arr = levelData.split(''); 
+        else arr = levelData.includes(',') ? levelData.split(',') : levelData.split('');
+        content = arr[Math.floor(Math.random()*arr.length)];
+    } else {
+        content = levelData[Math.floor(Math.random()*levelData.length)];
+    }
+    enemies.push(new Enemy(content));
+}
+
+function handleKeydown(e) {
+    if(gameState !== 'PLAYING' || config.mode === 'chn') return;
+    if(e.key.length > 1) return; 
+    processInput(e.key);
+}
+
+function handleTrapInput(e) {
+    if(gameState !== 'PLAYING') { inputTrap.value = ''; return; }
+    if(isComposing) return;
+    let val = inputTrap.value;
+    if(!val) return;
+    if(config.mode === 'chn') {
+        let chars = val.split('');
+        chars.forEach(char => processInput(char));
+    }
+    inputTrap.value = '';
+}
+
+function processInput(char) {
+    keyStats.total++;
+    let target = enemies.find(e => e.typed.length > 0 && e.text.startsWith(e.typed + char));
+    if(!target) {
+        let candidates = enemies.filter(e => e.typed.length === 0 && e.text.startsWith(char));
+        if(candidates.length > 0) {
+            candidates.sort((a,b) => b.y - a.y);
+            target = candidates[0];
+        }
+    }
+    if(target) {
+        target.typed += char;
+        playSound('laser', combo); 
+        lasers.push(new Laser(target.x + 10, target.y));
+        if(config.mode !== 'chn') keyStats.hits[char.toLowerCase()] = (keyStats.hits[char.toLowerCase()]||0) + 1;
+        if(target.typed === target.text) destroyEnemy(target);
+    } else {
+        playSound('error');
+        combo = 0; updateUI();
+        if(config.mode !== 'chn') keyStats.errors[char.toLowerCase()] = (keyStats.errors[char.toLowerCase()]||0) + 1;
+        canvas.style.transform = `translate(${Math.random()*6-3}px, ${Math.random()*6-3}px)`;
+        setTimeout(()=>canvas.style.transform='none', 50);
+    }
+}
+
+function destroyEnemy(e) {
+    enemies = enemies.filter(x => x !== e);
+    let pts = (e.text.length * 10) + (combo * 5);
+    score += pts;
+    combo++;
+    playSound('explosion');
+    updateUI();
+    if(score >= config.currentTargetScore) gameOver(true);
+}
+
+function updateUI() {
+    document.getElementById('score-val').innerText = score;
+    // 进度条是针对当前关卡目标的
+    let target = config.currentTargetScore;
+    let startScore = target - config.targetScore; // 假设每关增加500，进度条只显示本关进度
+    if (levelMultiplier === 1) startScore = 0;
+    
+    // 为了简化展示，我们让进度条显示 (当前分 / 目标分)
+    let progress = Math.min(100, (score / target) * 100);
+    document.getElementById('progress-fill').style.width = progress + '%';
+    document.getElementById('target-score').innerText = target;
+    document.getElementById('hp-fill').style.width = hp + '%';
+
+    const c = document.getElementById('combo-display');
+    if(combo > 1) { 
+        c.innerText = `连击 x${combo}`; c.style.opacity = 1; 
+        let scale = 1 + Math.min(combo, 20) * 0.05;
+        c.style.transform = `translateX(-50%) scale(${scale})`;
+        c.style.color = combo > 15 ? '#f0f' : (combo > 10 ? '#f00' : (combo > 5 ? '#ff0' : '#ff0'));
+    }
+    else { c.style.opacity = 0; c.style.transform = `translateX(-50%) scale(1)`;}
+}
+
+function loop(ts) {
+    if(gameState !== 'PLAYING') return;
+    let dt = ts - lastTime; lastTime = ts;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    spawnTimer += dt;
+    // 频率随关卡等级增加 (间隔减少)
+    let baseRate = SPAWN_RATES[config.spawnRate] || 1500;
+    let currentRate = baseRate / (1 + (levelMultiplier - 1) * 0.1); 
+    
+    if(spawnTimer > currentRate) { spawnEnemy(); spawnTimer = 0; }
+
+    enemies.forEach((e, i) => {
+        e.update(dt);
+        e.draw(ctx);
+        if(e.y > canvas.height) {
+            hp -= 15;
+            playSound('damage');
+            if(config.mode === 'chn') wordStats.missed.push(e.text);
+            enemies.splice(i, 1);
+            combo = 0; updateUI();
+            document.getElementById('hp-fill').style.width = hp + '%';
+            if(hp <= 0) gameOver(false);
+        }
+    });
+    lasers.forEach((l,i) => { l.update(); l.draw(ctx); if(l.life<=0) lasers.splice(i,1); });
+    drawMatrixRain();
+    requestAnimationFrame(loop);
+}
+
+function gameOver(win) {
+    gameState = 'GAMEOVER'; inputTrap.blur();
+    let endTime = Date.now();
+    let durationMinutes = (endTime - levelStartTime) / 60000;
+    if (durationMinutes < 0.01) durationMinutes = 0.01; // 防止除以零
+
+    document.getElementById('result-screen').classList.remove('hidden');
+    document.getElementById('hud').classList.add('hidden');
+    document.getElementById('level-indicator').classList.add('hidden');
+
+    let title = document.getElementById('result-title');
+    // 根据结果显示不同按钮
+    let nextBtn = document.getElementById('next-level-btn');
+    
+    if (win) {
+        title.innerText = `关卡 ${levelMultiplier} 完成！`;
+        title.style.color = "#0f0";
+        playSound('win');
+        nextBtn.classList.remove('hidden');
+    } else {
+        title.innerText = "系统崩溃 - 防御失败";
+        title.style.color = "#f00";
+        playSound('lose');
+        nextBtn.classList.add('hidden');
+    }
+
+    document.getElementById('end-score').innerText = score;
+    
+    // 准确率计算
+    let acc = 100;
+    let errCount = 0;
+    if(config.mode !== 'chn' && keyStats.total > 0) {
+        errCount = Object.values(keyStats.errors).reduce((a,b)=>a+b, 0);
+        acc = Math.floor(((keyStats.total - errCount)/keyStats.total)*100);
+    }
+    document.getElementById('end-acc').innerText = acc + "%";
+
+    // 打字速度 (WPM) 计算
+    // WPM = (正确字符数 / 5) / 分钟数
+    // 在中文模式下，keyStats.total 记录的是处理的字符数，虽然不统计具体键位错误，
+    // 但可以近似认为 total 是输入的字符量。
+    let correctChars = keyStats.total - errCount;
+    let wpm = Math.round((correctChars / 5) / durationMinutes);
+    document.getElementById('end-wpm').innerText = wpm;
+
+    const kbContainer = document.getElementById('viz-keyboard-container');
+    const wordContainer = document.getElementById('viz-word-container');
+    if(config.mode === 'chn') {
+        kbContainer.classList.add('hidden');
+        wordContainer.classList.remove('hidden');
+        renderWordStats();
+    } else {
+        wordContainer.classList.add('hidden');
+        kbContainer.classList.remove('hidden');
+        renderKeyboardMap();
+    }
+}
+
+function renderKeyboardMap() {
+    const div = document.getElementById('keyboard-viz'); div.innerHTML = '';
+    KEYBOARD_LAYOUT.forEach(row => {
+        let r = document.createElement('div'); r.className = 'kb-row';
+        for(let char of row) {
+            let k = document.createElement('div'); k.className = 'key';
+            k.innerText = char===' '?'SPACE':char.toUpperCase();
+            if(char===' ') k.classList.add('space');
+            let err = keyStats.errors[char] || 0;
+            let hit = keyStats.hits[char] || 0;
+            if(err > 0 && err >= hit) k.classList.add('bad');
+            else if(hit > 0) k.classList.add('good');
+            r.appendChild(k);
+        }
+        div.appendChild(r);
+    });
+}
+
+function renderWordStats() {
+    const div = document.getElementById('word-viz'); div.innerHTML = '';
+    if(wordStats.missed.length === 0) {
+        div.innerHTML = '<span style="color:#0f0">无漏网之鱼，完美防御！</span>'; return;
+    }
+    let counts = {};
+    wordStats.missed.forEach(w => counts[w] = (counts[w]||0)+1);
+    for(let w in counts) {
+        let tag = document.createElement('div'); tag.className = 'error-tag';
+        tag.innerText = `${w} (x${counts[w]})`; div.appendChild(tag);
+    }
+}
+
+function resetGame() {
+    document.getElementById('result-screen').classList.add('hidden');
+    document.getElementById('start-menu').classList.remove('hidden');
+    // 强制重置视觉状态
+    document.querySelectorAll('#speed-container .btn').forEach(b => {
+        if(b.innerText.includes('慢速') && config.speed === 'slow') b.classList.add('active');
+    });
+}
+
+function initAudio() { if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); }
+function playSound(type, currentCombo = 0) {
+    if(!audioCtx) return;
+    const osc = audioCtx.createOscillator(); const g = audioCtx.createGain();
+    osc.connect(g); g.connect(audioCtx.destination);
+    let t = audioCtx.currentTime;
+    if(type === 'laser') {
+        if (currentCombo >= 15) {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(220, t); osc.frequency.linearRampToValueAtTime(880, t + 0.3);
+            g.gain.setValueAtTime(0.3, t); g.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+            osc.start(t); osc.stop(t + 0.4);
+            const osc2 = audioCtx.createOscillator(); const g2 = audioCtx.createGain();
+            osc2.connect(g2); g2.connect(audioCtx.destination);
+            osc2.type = 'square'; osc2.frequency.setValueAtTime(880, t); osc2.frequency.linearRampToValueAtTime(1760, t + 0.3);
+            g2.gain.setValueAtTime(0.1, t); g2.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+            osc2.start(t); osc2.stop(t + 0.3);
+        } else if (currentCombo >= 10) {
+            osc.type = 'square'; osc.frequency.setValueAtTime(1200, t); osc.frequency.exponentialRampToValueAtTime(100, t + 0.25);
+            g.gain.setValueAtTime(0.15, t); g.gain.linearRampToValueAtTime(0, t + 0.25);
+            osc.start(t); osc.stop(t + 0.25);
+        } else if (currentCombo >= 5) {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(600, t); osc.frequency.linearRampToValueAtTime(1200, t + 0.15);
+            g.gain.setValueAtTime(0.15, t); g.gain.linearRampToValueAtTime(0, t + 0.15);
+            osc.start(t); osc.stop(t + 0.15);
+        } else if (currentCombo >= 3) {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(400, t + 0.1);
+            g.gain.setValueAtTime(0.1, t); g.gain.linearRampToValueAtTime(0, t + 0.1);
+            osc.start(t); osc.stop(t + 0.1);
+        } else {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
+            g.gain.setValueAtTime(0.1, t); g.gain.linearRampToValueAtTime(0, t + 0.1);
+            osc.start(t); osc.stop(t + 0.1);
+        }
+    } else if(type==='error') {
+        osc.type='sawtooth'; osc.frequency.setValueAtTime(150,t);
+        g.gain.setValueAtTime(0.1,t); g.gain.linearRampToValueAtTime(0,t+0.15);
+        osc.start(t); osc.stop(t+0.15);
+    } else if(type==='win') {
+        osc.type='triangle'; osc.frequency.setValueAtTime(440,t); osc.frequency.linearRampToValueAtTime(880,t+0.3);
+        g.gain.setValueAtTime(0.2,t); g.gain.linearRampToValueAtTime(0,t+1);
+        osc.start(t); osc.stop(t+1);
+    } else if(type==='explosion') {
+        osc.type='square'; osc.frequency.setValueAtTime(200,t); osc.frequency.exponentialRampToValueAtTime(50,t+0.2);
+        g.gain.setValueAtTime(0.1,t); g.gain.linearRampToValueAtTime(0,t+0.2);
+        osc.start(t); osc.stop(t+0.2);
+    }
+}
+
+let drops=[]; 
+function initMatrixRain() { let c=Math.floor(window.innerWidth/20); drops=Array(c).fill(0); }
+function drawMatrixRain() {
+    bgCtx.fillStyle='rgba(0,0,0,0.1)'; bgCtx.fillRect(0,0,bgCanvas.width,bgCanvas.height);
+    bgCtx.fillStyle='#0f0'; bgCtx.font='15px monospace';
+    drops.forEach((y,i)=>{
+        let t=String.fromCharCode(0x30A0+Math.random()*96);
+        bgCtx.fillText(t, i*20, y*20);
+        if(y*20>bgCanvas.height && Math.random()>0.98) drops[i]=0;
+        drops[i]++;
+    });
+}
+
+init();
+</script>
+</body>
+</html>

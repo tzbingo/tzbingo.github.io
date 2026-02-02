@@ -1,0 +1,134 @@
+<!-- layouts/shortcodes/iframe-pro.html -->
+<!-- 1. 生成唯一ID (使用路径+序号，不依赖Inner，无需闭合标签) -->
+{{ $uid := substr (md5 (printf "%s-%d" (.Get "src") .Ordinal)) 0 8 }}
+
+<div id="wrapper-{{ $uid }}" class="iframe-pro-wrapper" style="position: relative; margin: 2rem 0;">
+    
+    <!-- 顶部工具栏 -->
+    <div class="iframe-toolbar">
+        <span class="toolbar-title">{{ .Get "title" | default "演示页面" }}</span>
+        <!-- 注意：这里去掉了 onclick，改用 class 绑定 -->
+        <button class="btn-enter-fs" title="全屏运行">
+            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+            全屏体验
+        </button>
+    </div>
+
+    <!-- Iframe 本体 -->
+    <iframe 
+        class="iframe-body"
+        src="{{ .Get "src" }}" 
+        width="100%" 
+        height="{{ .Get "height" | default "500px" }}"
+        frameborder="0"
+        allow="fullscreen"
+        style="background: #fff; display: block; width: 100%;"
+    ></iframe>
+
+    <!-- 悬浮退出按钮 -->
+    <div class="floating-exit-zone">
+        <button class="btn-exit-fs">
+            <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            退出全屏
+        </button>
+    </div>
+
+</div>
+
+<!-- CSS 样式 (保持不变，为了完整性再次列出) -->
+<style>
+    .iframe-pro-wrapper {
+        border: 1px solid #e1e4e8;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        background: #f6f8fa;
+    }
+    .iframe-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 15px;
+        background: #f6f8fa;
+        border-bottom: 1px solid #e1e4e8;
+    }
+    .toolbar-title { font-weight: 600; color: #444; font-size: 0.9rem; }
+    .btn-enter-fs {
+        display: flex; align-items: center; gap: 6px;
+        background-color: #007bff; color: white; border: none;
+        padding: 6px 12px; border-radius: 4px; font-size: 0.85rem;
+        cursor: pointer; transition: background 0.2s;
+    }
+    .btn-enter-fs:hover { background-color: #0056b3; }
+    
+    /* 全屏逻辑样式 */
+    .floating-exit-zone { display: none; }
+    .iframe-pro-wrapper.is-fullscreen {
+        position: fixed !important; top: 0; left: 0;
+        width: 100vw; height: 100vh; z-index: 9999;
+        border: none; border-radius: 0;
+    }
+    .iframe-pro-wrapper.is-fullscreen .iframe-body { height: 100vh !important; }
+    .iframe-pro-wrapper.is-fullscreen .iframe-toolbar { display: none; }
+    .iframe-pro-wrapper.is-fullscreen .floating-exit-zone {
+        display: flex; justify-content: center; position: absolute;
+        top: 0; left: 0; width: 100%; height: 80px; z-index: 10000;
+        background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0) 100%);
+        opacity: 0; transition: opacity 0.4s ease; pointer-events: none;
+    }
+    .iframe-pro-wrapper.is-fullscreen .floating-exit-zone:hover { opacity: 1; pointer-events: auto; }
+    .btn-exit-fs {
+        margin-top: 15px; background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.4);
+        color: white; padding: 8px 20px; border-radius: 20px;
+        cursor: pointer; display: flex; align-items: center; gap: 8px;
+        font-size: 0.9rem; height: 40px; transition: background 0.2s;
+    }
+    .btn-exit-fs:hover { background: rgba(255, 255, 255, 0.4); }
+</style>
+
+<!-- JS 逻辑 (使用 IIFE 闭包，彻底解决变量名/函数名冲突问题) -->
+<script>
+(function() {
+    var wrapperId = "wrapper-{{ $uid }}";
+    var wrapper = document.getElementById(wrapperId);
+    
+    // 如果页面上有多个组件，防止找不到元素
+    if (!wrapper) return;
+
+    var btnEnter = wrapper.querySelector('.btn-enter-fs');
+    var btnExit = wrapper.querySelector('.btn-exit-fs');
+    
+    // 定义全屏切换逻辑
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            // 进入全屏
+            if(wrapper.requestFullscreen) { wrapper.requestFullscreen(); }
+            else if(wrapper.webkitRequestFullscreen) { wrapper.webkitRequestFullscreen(); }
+            else if(wrapper.msRequestFullscreen) { wrapper.msRequestFullscreen(); }
+        } else {
+            // 退出全屏
+            if(document.exitFullscreen) { document.exitFullscreen(); }
+            else if(document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
+            else if(document.msExitFullscreen) { document.msExitFullscreen(); }
+        }
+    }
+
+    // 绑定点击事件 (不使用 onclick 属性)
+    if(btnEnter) btnEnter.addEventListener('click', toggleFullScreen);
+    if(btnExit) btnExit.addEventListener('click', toggleFullScreen);
+
+    // 监听全屏状态变化
+    function handleFsChange() {
+        if (document.fullscreenElement === wrapper || document.webkitFullscreenElement === wrapper) {
+            wrapper.classList.add("is-fullscreen");
+        } else {
+            wrapper.classList.remove("is-fullscreen");
+        }
+    }
+
+    document.addEventListener('fullscreenchange', handleFsChange);
+    document.addEventListener('webkitfullscreenchange', handleFsChange);
+
+})();
+</script>
